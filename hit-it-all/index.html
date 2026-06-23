@@ -1,0 +1,84 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!-- Game name -->
+    <title>hit-it-all</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000000;
+            width: 100%;
+            height: 100%;
+        }
+
+        #game-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000000;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+    <script src="phaser.js"></script>
+    <script src="uieditor.js"></script>
+    <script src="scenes/start.js"></script>
+    <script src="scenes/game.js"></script>
+    <script src="scenes/end.js"></script>
+</head>
+
+<body>
+    <script>
+        function getBaseGameSize() {
+            const isLandscape = window.innerWidth > window.innerHeight;
+            return isLandscape
+                ? { width: 1920, height: 1080 }
+                : { width: 1080, height: 1920 };
+        }
+
+        const baseGameSize = getBaseGameSize();
+        const initialIsLandscape = window.innerWidth > window.innerHeight;
+
+        const config = {
+            type: Phaser.AUTO,
+            width: baseGameSize.width,
+            height: baseGameSize.height,
+            parent: "game-container",
+            backgroundColor: "#000",
+            scale: {
+                mode: Phaser.Scale.RESIZE,
+                autoCenter: Phaser.Scale.CENTER_BOTH,
+            },
+            scene: [Start, Game, End],
+        };
+
+        window.addEventListener("load", () => {
+            if (typeof Phaser === "undefined") {
+                console.error("Phaser is NOT loaded. Check inline Phaser code.");
+                return;
+            }
+            new Phaser.Game(config);
+        });
+
+        window.addEventListener("resize", () => {
+            const isLandscape = window.innerWidth > window.innerHeight;
+            if (isLandscape !== initialIsLandscape) {
+                window.location.reload();
+            }
+        });
+    </script>
+    <div id="game-container"></div>
+</body>
+
+</html>
