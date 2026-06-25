@@ -8,7 +8,7 @@ from typing import Any, Dict
 CONFIG_NAME = "HIT_IT_ALL_SETTINGS"
 
 DEFAULT_CONFIG: Dict[str, Any] = {
-    "gameplay": {"targetScore": None, "targetScoreMin": 10, "targetScoreMax": 40, "timerDuration": 60, "maxWickets": 3, "nextBallDelay": 3000, "ballTypes": ["FULL_TOSS", "BOUNCER", "YORKER", "GOOD_LENGTH", "SLOWER", "SWING"], "wicketHitChance": 45, "handPointerDuration": 3000, "handSwipeDistancePortrait": 190, "handSwipeDistanceLandscape": 260},
+    "gameplay": {"targetScore": None, "targetScoreMin": 10, "targetScoreMax": 40, "timerDuration": 60, "maxWickets": 1, "nextBallDelay": 3000, "ballTypes": ["FULL_TOSS", "BOUNCER", "YORKER", "GOOD_LENGTH", "SLOWER", "SWING"], "wicketHitChance": 45, "handPointerDuration": 3000, "handSwipeDistancePortrait": 190, "handSwipeDistanceLandscape": 260},
     "scoring": {"powerRun": 6, "normalRun": 4, "defenceRun": 1, "perfectTimingWindow": 0.075, "goodTimingWindow": 0.15, "okayTimingWindow": 0.24},
     "delivery": {"speeds": {"FULL_TOSS": 720, "BOUNCER": 680, "YORKER": 620, "GOOD_LENGTH": 760, "SLOWER": 980, "SWING": 820}, "idealHitTimes": {"FULL_TOSS": 0.72, "BOUNCER": 0.86, "YORKER": 0.90, "GOOD_LENGTH": 0.82, "SLOWER": 0.84, "SWING": 0.83}},
     "players": {"batsman": {"portrait": {"width": 260, "height": 390}, "landscape": {"width": 230, "height": 340}}, "bowler": {"portrait": {"width": 240, "height": 360}, "landscape": {"width": 230, "height": 340}}, "bowlerHand": "LEFT"},

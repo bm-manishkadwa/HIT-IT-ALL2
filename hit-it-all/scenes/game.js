@@ -16,7 +16,7 @@ class Game extends Phaser.Scene {
         this.waitingForShot = false;
         this.currentDelivery = null;
         this.deliveryFrameEvent = null;
-        this.maxWickets = 3;
+        this.maxWickets = 1;
         this.nextBallDelay = 3000;
 
         this.ballTypes = ['FULL_TOSS', 'BOUNCER', 'YORKER', 'GOOD_LENGTH', 'SLOWER', 'SWING'];
@@ -1369,38 +1369,39 @@ class Game extends Phaser.Scene {
         }
 
         const mode = this.getLayoutMode();
-        const handLayout = mode.layout.hand_pointer;
+        const pitchLayout = mode.layout.cricket_pitch;
 
-        const startX = handLayout.x - mode.baseWidth / 2;
-        const startY = handLayout.y - mode.baseHeight / 2;
-        const swipeDistance = mode.isLandscape
-            ? this.getNumberConfig('gameplay', 'handSwipeDistanceLandscape', 260, 0)
-            : this.getNumberConfig('gameplay', 'handSwipeDistancePortrait', 190, 0);
+        const tapX = pitchLayout.x - mode.baseWidth / 2;
+        const tapY = pitchLayout.y - mode.baseHeight / 2;
         const baseScale = this.getActiveLayoutValue('hand_pointer', 'scale') || 1;
 
         this.tweens.killTweensOf(this.hand_pointer);
 
         this.hand_pointer
-            .setPosition(startX, startY)
+            .setPosition(tapX, tapY)
             .setScale(baseScale)
             .setAlpha(1)
             .setDepth(60);
 
         this.tweens.add({
             targets: this.hand_pointer,
-            x: startX + swipeDistance,
-            alpha: 0.35,
-            repeat: -1,
-            duration: 850,
+            scaleX: baseScale * 0.82,
+            scaleY: baseScale * 0.82,
+            alpha: 0.45,
+            repeat: 1,
+            yoyo: true,
+            duration: 360,
             ease: 'Sine.easeInOut',
             onRepeat: () => {
-                this.hand_pointer.setX(startX).setAlpha(1);
+                this.hand_pointer
+                    .setPosition(tapX, tapY)
+                    .setScale(baseScale)
+                    .setAlpha(1);
+            },
+            onComplete: () => {
+                this.hideHandPointer();
+                if (onComplete) onComplete();
             }
-        });
-
-        this.time.delayedCall(this.getNumberConfig('gameplay', 'handPointerDuration', 3000, 0), () => {
-            this.hideHandPointer();
-            if (onComplete) onComplete();
         });
     }
 
@@ -1715,15 +1716,29 @@ class Game extends Phaser.Scene {
     }
 
     _endGame(reason) {
+        if (this.endingGame) return;
+        this.endingGame = true;
+
         this._stopTimer();
         this._stopDeliveryLoop();
         this.stopCrowdSound();
         this.gameActive = false;
         this.playSfx(reason === 'win' ? 'sfx_game_win' : 'sfx_game_lose', { volume: this.getNumberConfig('audio', 'resultVolume', 1, 0, 1) });
-        this.scene.start('End', {
+
+        const endData = {
             reason,
             runs: this.indiaRuns,
             target: this.targetScore
+        };
+
+        if (!this.cameras?.main) {
+            this.scene.start('End', endData);
+            return;
+        }
+
+        this.cameras.main.once('camerafadeoutcomplete', () => {
+            this.scene.start('End', endData);
         });
+        this.cameras.main.fadeOut(450, 0, 0, 0);
     }
 }

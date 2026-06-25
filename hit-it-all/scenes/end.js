@@ -55,6 +55,7 @@ class End extends Phaser.Scene {
     }
 
     create() {
+        this.cameras.main.fadeIn(450, 0, 0, 0);
         this.createBackground();
         this.createEndContent();
         this.reflowForResize();
@@ -94,16 +95,6 @@ class End extends Phaser.Scene {
             .setDepth(10);
         if (this.getBoolConfig('endScene', 'restartOnDownloadButton', true)) {
             this.downloadButton.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.scene.start('Game'));
-        }
-        if (this.getBoolConfig('effects', 'endButtonPulse', true)) {
-            this.tweens.add({
-                targets: this.downloadButton,
-                alpha: this.getNumberConfig('endScene', 'buttonPulseAlpha', 0.82, 0, 1),
-                duration: this.getNumberConfig('endScene', 'buttonPulseDuration', 1100, 0),
-                yoyo: true,
-                repeat: -1,
-                ease: 'Sine.easeInOut'
-            });
         }
     }
 
@@ -147,5 +138,25 @@ class End extends Phaser.Scene {
         this.downloadButton
             .setPosition(W / 2, H * (isLandscape ? 0.84 : 0.85))
             .setScale(buttonScale);
+
+        this.startDownloadButtonScalePulse();
+    }
+
+    startDownloadButtonScalePulse() {
+        if (!this.downloadButton || !this.getBoolConfig('effects', 'endButtonPulse', true)) return;
+
+        this.tweens.killTweensOf(this.downloadButton);
+
+        const baseScale = this.downloadButton.scaleX || 1;
+        this.tweens.add({
+            targets: this.downloadButton,
+            scaleX: baseScale * 1.07,
+            scaleY: baseScale * 1.07,
+            alpha: this.getNumberConfig('endScene', 'buttonPulseAlpha', 0.82, 0, 1),
+            duration: this.getNumberConfig('endScene', 'buttonPulseDuration', 1100, 0),
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
     }
 }

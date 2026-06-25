@@ -55,7 +55,7 @@
                 targetScoreMin: 10,
                 targetScoreMax: 40,
                 timerDuration: 60,
-                maxWickets: 3,
+                maxWickets: 1,
                 nextBallDelay: 3000,
                 ballTypes: ['FULL_TOSS', 'BOUNCER', 'YORKER', 'GOOD_LENGTH', 'SLOWER', 'SWING'],
                 wicketHitChance: 45,
@@ -84,7 +84,7 @@
                 bowler: { portrait: { width: 240, height: 360 }, landscape: { width: 230, height: 340 } },
                 bowlerHand: 'LEFT'
             },
-            countdown: { enabled: true, steps: ['3', '2', '1', 'GO!'], firstDelay: 300, stepDuration: 700, goHold: 400 },
+            countdown: { enabled: false, steps: ['3', '2', '1', 'GO!'], firstDelay: 300, stepDuration: 700, goHold: 400 },
             audio: { enabled: true, crowd: true, ballHit: true, wicket: true, win: true, lose: true, crowdVolume: 0.28, sfxVolume: 0.9, resultVolume: 1 },
             effects: { cameraShake: true, impactFlash: true, showShotFeedback: true, endButtonPulse: true },
             startScene: { tapToStart: true },
