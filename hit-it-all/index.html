@@ -47,9 +47,51 @@
                 : { width: 1080, height: 1920 };
         }
 
-        const baseGameSize = getBaseGameSize();
-        const initialIsLandscape = window.innerWidth > window.innerHeight;
 
+        // Dynamic configuration for Hit It All. Change these values only.
+        window.HIT_IT_ALL_SETTINGS = {
+            gameplay: {
+                targetScore: null,
+                targetScoreMin: 10,
+                targetScoreMax: 40,
+                timerDuration: 60,
+                maxWickets: 3,
+                nextBallDelay: 3000,
+                ballTypes: ['FULL_TOSS', 'BOUNCER', 'YORKER', 'GOOD_LENGTH', 'SLOWER', 'SWING'],
+                wicketHitChance: 45,
+                handPointerDuration: 3000,
+                handSwipeDistancePortrait: 190,
+                handSwipeDistanceLandscape: 260
+            },
+            scoring: {
+                powerRun: 6,
+                normalRun: 4,
+                defenceRun: 1,
+                perfectTimingWindow: 0.075,
+                goodTimingWindow: 0.15,
+                okayTimingWindow: 0.24
+            },
+            delivery: {
+                speeds: { FULL_TOSS: 720, BOUNCER: 680, YORKER: 620, GOOD_LENGTH: 760, SLOWER: 980, SWING: 820 },
+                idealHitTimes: { FULL_TOSS: 0.72, BOUNCER: 0.86, YORKER: 0.90, GOOD_LENGTH: 0.82, SLOWER: 0.84, SWING: 0.83 },
+                bounceHeight: {
+                    portrait: { FULL_TOSS: 0, BOUNCER: 170, YORKER: 22, GOOD_LENGTH: 62, SLOWER: 48, SWING: 72 },
+                    landscape: { FULL_TOSS: 0, BOUNCER: 130, YORKER: 15, GOOD_LENGTH: 46, SLOWER: 36, SWING: 58 }
+                }
+            },
+            players: {
+                batsman: { portrait: { width: 260, height: 390 }, landscape: { width: 230, height: 340 } },
+                bowler: { portrait: { width: 240, height: 360 }, landscape: { width: 230, height: 340 } },
+                bowlerHand: 'LEFT'
+            },
+            countdown: { enabled: true, steps: ['3', '2', '1', 'GO!'], firstDelay: 300, stepDuration: 700, goHold: 400 },
+            audio: { enabled: true, crowd: true, ballHit: true, wicket: true, win: true, lose: true, crowdVolume: 0.28, sfxVolume: 0.9, resultVolume: 1 },
+            effects: { cameraShake: true, impactFlash: true, showShotFeedback: true, endButtonPulse: true },
+            startScene: { tapToStart: true },
+            endScene: { restartOnDownloadButton: true, buttonPulseDuration: 1100, buttonPulseAlpha: 0.82 }
+        };
+
+        const baseGameSize = getBaseGameSize();
         const config = {
             type: Phaser.AUTO,
             width: baseGameSize.width,
@@ -71,11 +113,8 @@
             new Phaser.Game(config);
         });
 
-        window.addEventListener("resize", () => {
-            const isLandscape = window.innerWidth > window.innerHeight;
-            if (isLandscape !== initialIsLandscape) {
-                window.location.reload();
-            }
+        window.addEventListener("orientationchange", () => {
+            window.dispatchEvent(new Event("resize"));
         });
     </script>
     <div id="game-container"></div>

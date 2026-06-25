@@ -2,6 +2,8 @@ class End extends Phaser.Scene {
     constructor() {
         super('End');
 
+        this.gameSettings = window.HIT_IT_ALL_SETTINGS || {};
+
         // These values mirror the background placement used by the Game scene.
         this.BACKGROUND_PORTRAIT = {
             skay_a: { x: 562, y: 753, scale: 2.1, depth: 1 },
@@ -16,6 +18,26 @@ class End extends Phaser.Scene {
         };
     }
 
+
+    getSettingsSection(name) {
+        this.gameSettings = window.HIT_IT_ALL_SETTINGS || {};
+        return this.gameSettings[name] || {};
+    }
+
+    getBoolConfig(sectionName, key, fallback = true) {
+        const section = this.getSettingsSection(sectionName);
+        return section[key] === undefined ? fallback : !!section[key];
+    }
+
+    getNumberConfig(sectionName, key, fallback, min = null, max = null) {
+        const section = this.getSettingsSection(sectionName);
+        const raw = Number(section[key] === undefined || section[key] === null ? fallback : section[key]);
+        const value = Number.isFinite(raw) ? raw : fallback;
+        if (min !== null && value < min) return min;
+        if (max !== null && value > max) return max;
+        return value;
+    }
+
     init(data = {}) {
         this.result = data.reason || 'lose';
         this.runs = data.runs ?? 0;
@@ -26,8 +48,10 @@ class End extends Phaser.Scene {
         this.load.image('end_skay_a', 'assets/skay_a.png');
         this.load.image('end_stadium_a', 'assets/stadium_a.png');
         this.load.image('end_ground_a', 'assets/ground_a.png');
-        this.load.image('end_hit_it_logo', 'assets/Hit-It-logo.png');
-        this.load.image('end_play_now', 'assets/play-now.png');
+        this.load.image('end_hit_it_logo', 'assets/hit it updated asset/hit-it-logo_02.png');
+        this.load.image('end_win', 'assets/hit it updated asset/hit-it_win_01.png');
+        this.load.image('end_lose', 'assets/hit it updated asset/hit-it_lose_01.png');
+        this.load.image('end_download_button', 'assets/hit it updated asset/hit-it_download-btn_01.png');
     }
 
     create() {
@@ -61,38 +85,26 @@ class End extends Phaser.Scene {
             .setOrigin(0.5)
             .setDepth(10);
 
-        this.resultText = this.add.text(0, 0, won ? 'YOU WIN!' : 'GAME OVER', {
-            fontFamily: 'Arial Black, Arial',
-            fontSize: '86px',
-            color: won ? '#FFD700' : '#ffffff',
-            stroke: '#071d48',
-            strokeThickness: 14,
-            align: 'center'
-        }).setOrigin(0.5).setDepth(10);
-
-        this.scoreText = this.add.text(0, 0, `SCORE  ${this.runs}  /  TARGET  ${this.target}`, {
-            fontFamily: 'Arial Black, Arial',
-            fontSize: '42px',
-            color: '#ffffff',
-            stroke: '#071d48',
-            strokeThickness: 9,
-            align: 'center'
-        }).setOrigin(0.5).setDepth(10);
-
-        this.play_now = this.add.image(0, 0, 'end_play_now')
+        this.resultImage = this.add.image(0, 0, won ? 'end_win' : 'end_lose')
             .setOrigin(0.5)
-            .setDepth(10)
-            .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.scene.start('Game'));
+            .setDepth(10);
 
-        this.tweens.add({
-            targets: this.play_now,
-            alpha: 0.82,
-            duration: 650,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut'
-        });
+        this.downloadButton = this.add.image(0, 0, 'end_download_button')
+            .setOrigin(0.5)
+            .setDepth(10);
+        if (this.getBoolConfig('endScene', 'restartOnDownloadButton', true)) {
+            this.downloadButton.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.scene.start('Game'));
+        }
+        if (this.getBoolConfig('effects', 'endButtonPulse', true)) {
+            this.tweens.add({
+                targets: this.downloadButton,
+                alpha: this.getNumberConfig('endScene', 'buttonPulseAlpha', 0.82, 0, 1),
+                duration: this.getNumberConfig('endScene', 'buttonPulseDuration', 1100, 0),
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+        }
     }
 
     reflowForResize() {
@@ -117,27 +129,23 @@ class End extends Phaser.Scene {
         });
         this.backgroundContainer.sort('depth');
 
-        const logoWidth = Math.min(
-            W * (isLandscape ? 0.25 : 0.58),
-            520 * Math.max(uiScale, 0.65)
-        );
+        const logoWidth = Math.min(W * (isLandscape ? 0.21 : 0.45), 360 * Math.max(uiScale, 0.75));
         const logoScale = logoWidth / this.hit_it_logo.width;
 
         this.hit_it_logo
-            .setPosition(W / 2, H * (isLandscape ? 0.16 : 0.14))
+            .setPosition(W / 2, H * (isLandscape ? 0.15 : 0.13))
             .setScale(logoScale);
 
-        this.resultText
-            .setPosition(W / 2, H * (isLandscape ? 0.48 : 0.45))
-            .setFontSize(Math.max(40, 86 * uiScale));
+        const resultWidth = Math.min(W * (isLandscape ? 0.22 : 0.62), 440 * Math.max(uiScale, 0.8));
+        const resultScale = resultWidth / this.resultImage.width;
+        this.resultImage
+            .setPosition(W / 2, H * (isLandscape ? 0.52 : 0.48))
+            .setScale(resultScale);
 
-        this.scoreText
-            .setPosition(W / 2, H * (isLandscape ? 0.60 : 0.55))
-            .setFontSize(Math.max(22, 42 * uiScale));
-
-        const buttonScale = Math.max(0.55, Math.min(1, uiScale));
-        this.play_now
-            .setPosition(W / 2, H * (isLandscape ? 0.82 : 0.82))
+        const buttonWidth = Math.min(W * (isLandscape ? 0.28 : 0.66), 460 * Math.max(uiScale, 0.8));
+        const buttonScale = buttonWidth / this.downloadButton.width;
+        this.downloadButton
+            .setPosition(W / 2, H * (isLandscape ? 0.84 : 0.85))
             .setScale(buttonScale);
     }
 }

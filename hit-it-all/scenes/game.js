@@ -42,6 +42,7 @@ class Game extends Phaser.Scene {
         this.currentFitScale = 1;
         this.shotFeedbackHideEvent = null;
         this.bowlerSpriteFacesLeft = true;
+        this.gameSettings = window.HIT_IT_ALL_SETTINGS || {};
 
         this.LAYOUT_PORTRAIT = {
             cricket_pitch: { x: 550, y: 1422, scale: 0.9, depth: 4 },
@@ -78,11 +79,68 @@ class Game extends Phaser.Scene {
         };
     }
 
+
+    getSettingsSection(name) {
+        return (this.gameSettings && this.gameSettings[name]) || {};
+    }
+
+    getConfigValue(sectionName, key, fallback) {
+        const section = this.getSettingsSection(sectionName);
+        return section[key] === undefined || section[key] === null ? fallback : section[key];
+    }
+
+    getNumberConfig(sectionName, key, fallback, min = null, max = null) {
+        const raw = Number(this.getConfigValue(sectionName, key, fallback));
+        const value = Number.isFinite(raw) ? raw : fallback;
+        if (min !== null && value < min) return min;
+        if (max !== null && value > max) return max;
+        return value;
+    }
+
+    getBoolConfig(sectionName, key, fallback = true) {
+        const value = this.getConfigValue(sectionName, key, fallback);
+        return value === undefined ? fallback : !!value;
+    }
+
+    getNestedConfig(sectionName, key, fallback) {
+        const section = this.getSettingsSection(sectionName);
+        return section[key] === undefined || section[key] === null ? fallback : section[key];
+    }
+
+    refreshDynamicSettings() {
+        this.gameSettings = window.HIT_IT_ALL_SETTINGS || {};
+        const gameplay = this.getSettingsSection('gameplay');
+        const players = this.getSettingsSection('players');
+        const batsman = players.batsman || {};
+        const bowler = players.bowler || {};
+        this.maxWickets = this.getNumberConfig('gameplay', 'maxWickets', 3, 1);
+        this.nextBallDelay = this.getNumberConfig('gameplay', 'nextBallDelay', 3000, 0);
+        this.ballTypes = Array.isArray(gameplay.ballTypes) && gameplay.ballTypes.length ? gameplay.ballTypes : ['FULL_TOSS', 'BOUNCER', 'YORKER', 'GOOD_LENGTH', 'SLOWER', 'SWING'];
+        this.BOWLER_HAND = players.bowlerHand || 'LEFT';
+        this.PLAYER_SIZE = {
+            portrait: { ...(this.PLAYER_SIZE?.portrait || { width: 260, height: 390 }), ...(batsman.portrait || {}) },
+            landscape: { ...(this.PLAYER_SIZE?.landscape || { width: 230, height: 340 }), ...(batsman.landscape || {}) }
+        };
+        this.BOWLER_SIZE = {
+            portrait: { ...(this.BOWLER_SIZE?.portrait || { width: 240, height: 360 }), ...(bowler.portrait || {}) },
+            landscape: { ...(this.BOWLER_SIZE?.landscape || { width: 230, height: 340 }), ...(bowler.landscape || {}) }
+        };
+    }
+
+    getTargetScoreFromConfig() {
+        const fixed = Number(this.getConfigValue('gameplay', 'targetScore', NaN));
+        if (Number.isFinite(fixed) && fixed > 0) return Math.floor(fixed);
+        const min = Math.floor(this.getNumberConfig('gameplay', 'targetScoreMin', 10, 1));
+        const max = Math.max(min, Math.floor(this.getNumberConfig('gameplay', 'targetScoreMax', 40, min)));
+        return Phaser.Math.Between(min, max);
+    }
+
     preload() {
         this.loadAllTheAssets();
     }
 
     create() {
+        this.refreshDynamicSettings();
         this.cameras.main.setBackgroundColor('#1b69d8');
 
         this.createBattingFrames();
@@ -389,9 +447,11 @@ class Game extends Phaser.Scene {
                 { key, frame: 'backlift' },
                 { key, frame: 'stride' },
                 { key, frame: 'swing' },
+                { key, frame: 'follow' },
+                { key, frame: 'finish' },
                 { key, frame: 'idle' }
             ],
-            frameRate: 11,
+            frameRate: 12,
             repeat: 0
         });
 
@@ -684,25 +744,15 @@ class Game extends Phaser.Scene {
     }
 
     getDeliverySpeedByType(type) {
-        return {
-            FULL_TOSS: 720,
-            BOUNCER: 680,
-            YORKER: 620,
-            GOOD_LENGTH: 760,
-            SLOWER: 980,
-            SWING: 820
-        }[type] || 760;
+        const speeds = this.getNestedConfig('delivery', 'speeds', {});
+        const value = Number(speeds[type]);
+        return Number.isFinite(value) && value > 0 ? value : ({ FULL_TOSS: 720, BOUNCER: 680, YORKER: 620, GOOD_LENGTH: 760, SLOWER: 980, SWING: 820 }[type] || 760);
     }
 
     getIdealHitTimeByType(type) {
-        return {
-            FULL_TOSS: 0.72,
-            BOUNCER: 0.86,
-            YORKER: 0.90,
-            GOOD_LENGTH: 0.82,
-            SLOWER: 0.84,
-            SWING: 0.83
-        }[type] || 0.82;
+        const idealTimes = this.getNestedConfig('delivery', 'idealHitTimes', {});
+        const value = Number(idealTimes[type]);
+        return Number.isFinite(value) ? value : ({ FULL_TOSS: 0.72, BOUNCER: 0.86, YORKER: 0.90, GOOD_LENGTH: 0.82, SLOWER: 0.84, SWING: 0.83 }[type] || 0.82);
     }
 
     showPitchTapEffect(bounce) {
@@ -736,44 +786,33 @@ class Game extends Phaser.Scene {
 
     resolveDeliveryWithShot(inputType, swipeDistance = 0, holdMs = 0) {
         if (!this.currentDelivery || this.currentDelivery.resolved) return;
-
         const d = this.currentDelivery;
         const t = Phaser.Math.Clamp((this.time.now - d.startTime) / d.duration, 0, 1);
         const timingError = Math.abs(t - d.idealHitT);
-
+        const perfectWindow = this.getNumberConfig('scoring', 'perfectTimingWindow', 0.075, 0);
+        const goodWindow = this.getNumberConfig('scoring', 'goodTimingWindow', 0.15, perfectWindow);
+        const okayWindow = this.getNumberConfig('scoring', 'okayTimingWindow', 0.24, goodWindow);
+        const powerRun = Math.floor(this.getNumberConfig('scoring', 'powerRun', 6, 1));
+        const normalRun = Math.floor(this.getNumberConfig('scoring', 'normalRun', 4, 1));
+        const defenceRun = Math.floor(this.getNumberConfig('scoring', 'defenceRun', 1, 1));
         d.resolved = true;
         this.waitingForShot = false;
-
         let runs = 0;
         let animType = 'MISS';
-
-        if (timingError <= 0.075) {
-            if (inputType === 'POWER' || swipeDistance > 120 || holdMs < 160) {
-                runs = 6;
-                animType = 'POWER';
-            } else if (inputType === 'NORMAL' || inputType === 'TAP') {
-                runs = 4;
-                animType = 'NORMAL';
-            } else {
-                runs = 1;
-                animType = 'DEFENCE';
-            }
-        } else if (timingError <= 0.15) {
-            runs = inputType === 'DEFENCE' ? 1 : 4;
+        if (timingError <= perfectWindow) {
+            if (inputType === 'POWER' || swipeDistance > 120 || holdMs < 160) { runs = powerRun; animType = 'POWER'; }
+            else if (inputType === 'NORMAL' || inputType === 'TAP') { runs = normalRun; animType = 'NORMAL'; }
+            else { runs = defenceRun; animType = 'DEFENCE'; }
+        } else if (timingError <= goodWindow) {
+            runs = inputType === 'DEFENCE' ? defenceRun : normalRun;
             animType = inputType === 'DEFENCE' ? 'DEFENCE' : 'NORMAL';
-        } else if (timingError <= 0.24) {
-            runs = 1;
+        } else if (timingError <= okayWindow) {
+            runs = defenceRun;
             animType = 'DEFENCE';
         }
-
-        this.playSelectedShot(runs === 1 ? 'RUN_ONE' : animType);
-
-        if (runs > 0) {
-            this.handleHitBall(runs);
-        } else {
-            this.handleMissBall();
-        }
-
+        this.playSelectedShot(runs === defenceRun ? 'RUN_ONE' : animType);
+        if (runs > 0) this.handleHitBall(runs);
+        else this.handleMissBall();
         this.stopDeliveryFrameOnly();
     }
 
@@ -796,7 +835,7 @@ class Game extends Phaser.Scene {
             ease: 'Power2'
         });
 
-        this.cameras.main.shake(70, 0.002);
+        if (this.getBoolConfig('effects', 'cameraShake', true)) this.cameras.main.shake(70, 0.002);
     }
 
     handleHitBall(runs) {
@@ -911,13 +950,42 @@ class Game extends Phaser.Scene {
                 this.showWicketImpactEffect(wicketData.targetX, wicketData.targetY);
 
                 this.time.delayedCall(180, () => {
-                    this.ball.setAlpha(0);
-                    this.playWicketFallingAnimation();
-                    this.addWicket();
-                    this.waitForNextBall();
+                    this.waitForBatsmanShotComplete(() => {
+                        this.ball.setAlpha(0);
+                        this.playWicketFallingAnimation();
+                        this.addWicket();
+                        this.waitForNextBall();
+                    });
                 });
             }
         });
+    }
+
+    waitForBatsmanShotComplete(onComplete) {
+        if (!this.indian_plyer?.anims) {
+            if (onComplete) onComplete();
+            return;
+        }
+
+        const currentAnim = this.indian_plyer.anims.currentAnim;
+        const isShotPlaying = this.indian_plyer.anims.isPlaying && currentAnim?.key !== 'bat_idle';
+
+        if (!isShotPlaying) {
+            if (onComplete) onComplete();
+            return;
+        }
+
+        const fallback = this.time.delayedCall(900, () => {
+            this.indian_plyer.off('animationcomplete', finish);
+            if (onComplete) onComplete();
+        });
+
+        const finish = () => {
+            fallback.remove(false);
+            if (onComplete) onComplete();
+        };
+
+        this.indian_plyer.once('animationcomplete', finish);
     }
 
     showWicketImpactEffect(x, y) {
@@ -939,7 +1007,7 @@ class Game extends Phaser.Scene {
             ease: 'Power2'
         });
 
-        this.cameras.main.shake(220, 0.008);
+        if (this.getBoolConfig('effects', 'cameraShake', true)) this.cameras.main.shake(220, 0.008);
     }
 
     playWicketFallingAnimation() {
@@ -1047,13 +1115,15 @@ class Game extends Phaser.Scene {
     getBallBounceHeight() {
         const type = this.currentBallType;
         const isLandscape = this.getLayoutMode().isLandscape;
-
+        const bounceCfg = this.getNestedConfig('delivery', 'bounceHeight', {});
+        const orientationCfg = isLandscape ? (bounceCfg.landscape || {}) : (bounceCfg.portrait || {});
+        const configured = Number(orientationCfg[type]);
+        if (Number.isFinite(configured)) return configured;
         if (type === 'FULL_TOSS') return 0;
         if (type === 'BOUNCER') return isLandscape ? 130 : 170;
         if (type === 'YORKER') return isLandscape ? 15 : 22;
         if (type === 'SLOWER') return isLandscape ? 36 : 48;
         if (type === 'SWING') return isLandscape ? 58 : 72;
-
         return isLandscape ? 46 : 62;
     }
 
@@ -1066,7 +1136,7 @@ class Game extends Phaser.Scene {
         const targetY = wicket.y - wicketH * 0.25;
 
         return {
-            hit: Phaser.Math.Between(1, 100) <= 45,
+            hit: Phaser.Math.Between(1, 100) <= this.getNumberConfig('gameplay', 'wicketHitChance', 45, 0, 100),
             targetX,
             targetY,
             wicketW,
@@ -1110,11 +1180,13 @@ class Game extends Phaser.Scene {
     }
 
     getShotFeedback(run) {
-        return {
-            6: 'Into the stands!',
-            4: 'What a hit!',
-            1: 'Clean!'
-        }[run] || '';
+        const powerRun = Math.floor(this.getNumberConfig('scoring', 'powerRun', 6, 1));
+        const normalRun = Math.floor(this.getNumberConfig('scoring', 'normalRun', 4, 1));
+        const defenceRun = Math.floor(this.getNumberConfig('scoring', 'defenceRun', 1, 1));
+        if (run === powerRun) return 'Into the stands!';
+        if (run === normalRun) return 'What a hit!';
+        if (run === defenceRun) return 'Clean!';
+        return '';
     }
 
     showWicketFeedback() {
@@ -1127,7 +1199,7 @@ class Game extends Phaser.Scene {
     }
 
     showCustomFeedback(label) {
-        if (!this.shotFeedbackText) return;
+        if (!this.shotFeedbackText || !this.getBoolConfig('effects', 'showShotFeedback', true)) return;
 
         this.tweens.killTweensOf(this.shotFeedbackText);
 
@@ -1191,26 +1263,28 @@ class Game extends Phaser.Scene {
     }
 
     setupGame() {
+        this.refreshDynamicSettings();
         this.gameActive = false;
-        this.targetScore = Phaser.Math.Between(10, 40);
+        this.targetScore = this.getTargetScoreFromConfig();
         this.indiaRuns = 0;
         this.indiaWickets = 0;
         this.ballsBowled = 0;
-        this.timeLeft = 60;
+        this.timeLeft = Math.floor(this.getNumberConfig('gameplay', 'timerDuration', 60, 1));
         this.ballInMotion = false;
         this.waitingForShot = false;
         this.selectedShot = 'MISS';
-        this.currentBallType = 'GOOD_LENGTH';
+        this.currentBallType = this.ballTypes.includes('GOOD_LENGTH') ? 'GOOD_LENGTH' : this.ballTypes[0];
 
         this.hideHandPointer();
 
-        this.timerText.setText('60');
+        this.timerText.setText(String(this.timeLeft));
         this.timerText.setColor('#00FF00');
 
         this.updateChaseTarget();
         this.updateBatsmanRuns();
 
-        this.time.delayedCall(300, () => this._showCountdown());
+        const delay = this.getNumberConfig('countdown', 'firstDelay', 300, 0);
+        this.time.delayedCall(delay, () => this._showCountdown());
     }
 
     updateChaseTarget() {
@@ -1222,45 +1296,41 @@ class Game extends Phaser.Scene {
     }
 
     _showCountdown() {
-        const steps = ['3', '2', '1', 'GO!'];
+        if (!this.getBoolConfig('countdown', 'enabled', true)) {
+            this.countdownText.setAlpha(0);
+            this._startGame();
+            return;
+        }
+        const configuredSteps = this.getNestedConfig('countdown', 'steps', ['3', '2', '1', 'GO!']);
+        const steps = Array.isArray(configuredSteps) && configuredSteps.length ? configuredSteps.map(String) : ['3', '2', '1', 'GO!'];
+        const stepDuration = this.getNumberConfig('countdown', 'stepDuration', 700, 50);
+        const goHold = this.getNumberConfig('countdown', 'goHold', 400, 0);
         let i = 0;
-
         const next = () => {
             if (i >= steps.length) {
                 this.countdownText.setAlpha(0);
                 this._startGame();
                 return;
             }
-
             const label = steps[i++];
-            const isGo = label === 'GO!';
-
-            this.countdownText
-                .setText(label)
-                .setColor(isGo ? '#52b788' : '#FFD700')
-                .setScale(1.6)
-                .setAlpha(1)
-                .setDepth(70);
-
+            const isGo = label.toUpperCase() === 'GO!';
+            this.countdownText.setText(label).setColor(isGo ? '#52b788' : '#FFD700').setScale(1.6).setAlpha(1).setDepth(70);
             this.tweens.add({
                 targets: this.countdownText,
                 scale: 1,
                 alpha: isGo ? 1 : 0,
-                duration: 700,
+                duration: stepDuration,
                 ease: 'Power2',
-                onComplete: () => {
-                    this.time.delayedCall(isGo ? 400 : 100, next);
-                }
+                onComplete: () => this.time.delayedCall(isGo ? goHold : 100, next)
             });
         };
-
         next();
     }
 
     _startGame() {
         this.showHandPointerForThreeSeconds(() => {
             this.gameActive = true;
-            this.startCrowdSound();
+            if (this.getBoolConfig('audio', 'crowd', true)) this.startCrowdSound();
             this._startTimer();
             this._startDeliveryLoop();
         });
@@ -1303,7 +1373,9 @@ class Game extends Phaser.Scene {
 
         const startX = handLayout.x - mode.baseWidth / 2;
         const startY = handLayout.y - mode.baseHeight / 2;
-        const swipeDistance = mode.isLandscape ? 260 : 190;
+        const swipeDistance = mode.isLandscape
+            ? this.getNumberConfig('gameplay', 'handSwipeDistanceLandscape', 260, 0)
+            : this.getNumberConfig('gameplay', 'handSwipeDistancePortrait', 190, 0);
         const baseScale = this.getActiveLayoutValue('hand_pointer', 'scale') || 1;
 
         this.tweens.killTweensOf(this.hand_pointer);
@@ -1326,7 +1398,7 @@ class Game extends Phaser.Scene {
             }
         });
 
-        this.time.delayedCall(3000, () => {
+        this.time.delayedCall(this.getNumberConfig('gameplay', 'handPointerDuration', 3000, 0), () => {
             this.hideHandPointer();
             if (onComplete) onComplete();
         });
@@ -1350,7 +1422,7 @@ class Game extends Phaser.Scene {
 
         this.timerEvent = this.time.addEvent({
             delay: 1000,
-            repeat: 59,
+            loop: true,
             callback: () => {
                 this.timeLeft = Math.max(0, this.timeLeft - 1);
                 this.timerText.setText(String(this.timeLeft));
@@ -1473,8 +1545,13 @@ class Game extends Phaser.Scene {
     }
 
     playSfx(key, config = {}) {
+        if (!this.getBoolConfig('audio', 'enabled', true)) return;
+        const audioMap = { sfx_wicket_down: 'wicket', sfx_ball_hit_bat: 'ballHit', sfx_game_win: 'win', sfx_game_lose: 'lose' };
+        const audioKey = audioMap[key];
+        if (audioKey && !this.getBoolConfig('audio', audioKey, true)) return;
         if (!this.sound || !this.cache.audio.exists(key)) return;
-        this.sound.play(key, config);
+        const volume = config.volume === undefined ? this.getNumberConfig('audio', 'sfxVolume', 0.9, 0, 1) : config.volume;
+        this.sound.play(key, { ...config, volume });
     }
 
     startCrowdSound() {
@@ -1483,7 +1560,7 @@ class Game extends Phaser.Scene {
         if (!this.crowdSound) {
             this.crowdSound = this.sound.add('sfx_crowd', {
                 loop: true,
-                volume: 0.28
+                volume: this.getNumberConfig('audio', 'crowdVolume', 0.28, 0, 1)
             });
         }
 
@@ -1642,7 +1719,7 @@ class Game extends Phaser.Scene {
         this._stopDeliveryLoop();
         this.stopCrowdSound();
         this.gameActive = false;
-        this.playSfx(reason === 'win' ? 'sfx_game_win' : 'sfx_game_lose', { volume: 1 });
+        this.playSfx(reason === 'win' ? 'sfx_game_win' : 'sfx_game_lose', { volume: this.getNumberConfig('audio', 'resultVolume', 1, 0, 1) });
         this.scene.start('End', {
             reason,
             runs: this.indiaRuns,

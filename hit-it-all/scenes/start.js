@@ -23,6 +23,8 @@ class Start extends Phaser.Scene {
             swipe_to_play: { x: 532, y: 1405, scale: 0.7, depth: 3 },
         };
 
+        this.gameSettings = window.HIT_IT_ALL_SETTINGS || {};
+
         this.LAYOUT_LANDSCAPE = {
             cricket_pitch: { x: 1046, y: 750, scale: 1.35, depth: 4 },
             hit_it_logo: { x: 138, y: 781, scale: 0.6, depth: 4 },
@@ -43,6 +45,17 @@ class Start extends Phaser.Scene {
             stadium_a: { x: 1015, y: 336, scale: 1.05, depth: 1 },
             swipe_to_play: { x: 987, y: 828, scale: 0.75, depth: 3 },
         };
+    }
+
+
+    getSettingsSection(name) {
+        this.gameSettings = window.HIT_IT_ALL_SETTINGS || {};
+        return this.gameSettings[name] || {};
+    }
+
+    getBoolConfig(sectionName, key, fallback = true) {
+        const section = this.getSettingsSection(sectionName);
+        return section[key] === undefined ? fallback : !!section[key];
     }
 
     preload() {
@@ -151,11 +164,10 @@ class Start extends Phaser.Scene {
     }
 
     setupStartActions() {
-        this.swipe_to_play
-            .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => {
-                this.scene.start('Game');
-            });
+        const startGame = () => this.scene.start('Game');
+        if (this.swipe_to_play) this.swipe_to_play.setInteractive({ useHandCursor: true }).on('pointerdown', startGame);
+        if (this.play_now) this.play_now.setInteractive({ useHandCursor: true }).on('pointerdown', startGame);
+        if (this.getBoolConfig('startScene', 'tapToStart', true)) this.input.once('pointerdown', startGame);
     }
 
     reflowForResize(gameSize = { width: this.scale.width, height: this.scale.height }) {
