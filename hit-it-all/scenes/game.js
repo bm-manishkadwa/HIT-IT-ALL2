@@ -14,6 +14,7 @@ class Game extends Phaser.Scene {
 
         this.ballInMotion = false;
         this.waitingForShot = false;
+        this.waitingForDeliveryTap = false;
         this.currentDelivery = null;
         this.deliveryFrameEvent = null;
         this.maxWickets = 1;
@@ -30,32 +31,33 @@ class Game extends Phaser.Scene {
         this.pointerDownTime = 0;
 
         this.PLAYER_SIZE = {
-            portrait: { width: 260, height: 390 },
-            landscape: { width: 230, height: 340 }
+            portrait: { width: 164, height: 255 },
+            landscape: { width: 174, height: 270 }
         };
 
         this.BOWLER_SIZE = {
-            portrait: { width: 240, height: 360 },
-            landscape: { width: 230, height: 340 }
+            portrait: { width: 72, height: 258 },
+            landscape: { width: 76, height: 273 }
         };
 
         this.currentFitScale = 1;
         this.shotFeedbackHideEvent = null;
         this.bowlerSpriteFacesLeft = true;
+        this.BATSMAN_SHOT_SPRITESHEET_SCALE = 1.18;
         this.gameSettings = window.HIT_IT_ALL_SETTINGS || {};
 
         this.LAYOUT_PORTRAIT = {
             cricket_pitch: { x: 550, y: 1422, scale: 0.9, depth: 4 },
             hit_it_logo: { x: 160, y: 1719, scale: 0.55, depth: 4 },
             australia_flag: { x: 822, y: 134, scale: 1, depth: 3 },
-            austrialian_plyer: { x: 876, y: 1230, scale: 1, depth: 4 },
+            austrialian_plyer: { x: 876, y: 1300, scale: 1, depth: 4 },
             ball: { x: 746, y: 1225, scale: 0.55, alpha: 0, depth: 30 },
             cricket_wicket__l: { x: 983, y: 1336, scale: 1.45, depth: 5 },
             cricket_wicket__r: { x: 121, y: 1325, scale: 1.45, angle: -2.865, depth: 5 },
             ground_a: { x: 349, y: 270, scale: 3.05, depth: 1 },
             hand_pointer: { x: 239, y: 1289, scale: 1, alpha: 0, depth: 6 },
             india_flag: { x: 301, y: 127, scale: 1, depth: 3 },
-            indian_plyer: { x: 239, y: 1230, scale: 1, depth: 5 },
+            indian_plyer: { x: 239, y: 1300, scale: 1, depth: 5 },
             scoreboard_with_text: { x: 527, y: 639, scale: 1.4, depth: 3 },
             skay_a: { x: 562, y: 753, scale: 2.1, depth: 1 },
             stadium_a: { x: 543, y: 707, scale: 1.45, depth: 1 }
@@ -65,14 +67,14 @@ class Game extends Phaser.Scene {
             cricket_pitch: { x: 952, y: 766, scale: 1.25, depth: 4 },
             hit_it_logo: { x: 136, y: 980, scale: 0.55, depth: 4 },
             australia_flag: { x: 1197, y: 71, scale: 0.5, depth: 3 },
-            austrialian_plyer: { x: 1469, y: 600, scale: 1, depth: 4 },
+            austrialian_plyer: { x: 1469, y: 630, scale: 1, depth: 4 },
             ball: { x: 1210, y: 620, scale: 0.55, alpha: 0, depth: 30 },
             cricket_wicket__l: { x: 1583, y: 689, scale: 1.45, depth: 5 },
             cricket_wicket__r: { x: 363, y: 669, scale: 1.45, depth: 5 },
             ground_a: { x: 929, y: 36, scale: 1.95, depth: 1 },
             hand_pointer: { x: 480, y: 628, scale: 1, alpha: 0, depth: 6 },
             india_flag: { x: 784, y: 64, scale: 0.5, depth: 3 },
-            indian_plyer: { x: 480, y: 600, scale: 1, depth: 5 },
+            indian_plyer: { x: 480, y: 630, scale: 1, depth: 5 },
             scoreboard_with_text: { x: 980, y: 295, scale: 0.95, depth: 3 },
             skay_a: { x: 986, y: 371, scale: 1.45, depth: 1 },
             stadium_a: { x: 984, y: 342, scale: 1.1, depth: 1 }
@@ -144,7 +146,6 @@ class Game extends Phaser.Scene {
         this.cameras.main.setBackgroundColor('#1b69d8');
 
         this.createBattingFrames();
-        this.createBatsmanRunFrames();
         this.createBowlingFrames();
         this.createGameUI();
         this.createBatsmanAnimations();
@@ -351,23 +352,6 @@ class Game extends Phaser.Scene {
         });
     }
 
-    createBatsmanRunFrames() {
-        const tex = this.textures.get('batsman_run_sheet');
-        const frameCount = 8;
-        const sheetWidth = tex.getSourceImage().width;
-        const sheetHeight = tex.getSourceImage().height;
-
-        for (let i = 0; i < frameCount; i++) {
-            const x = Math.round((sheetWidth / frameCount) * i);
-            const nextX = Math.round((sheetWidth / frameCount) * (i + 1));
-            const name = `run_${i}`;
-
-            if (!tex.has(name)) {
-                tex.add(name, 0, x, 0, nextX - x, sheetHeight);
-            }
-        }
-    }
-
     createBowlingFrames() {
         const tex = this.textures.get('bowling_sheet');
 
@@ -455,23 +439,14 @@ class Game extends Phaser.Scene {
             repeat: 0
         });
 
-        this.anims.create({
-            key: 'bat_run_one',
-            frames: this.anims.generateFrameNames('batsman_run_sheet', {
-                prefix: 'run_',
-                start: 0,
-                end: 7
-            }),
-            frameRate: 12,
-            repeat: 0
-        });
-
         this.indian_plyer.on('animationcomplete', animation => {
             if (animation.key === 'bat_idle') return;
 
             this.indian_plyer.setTexture('batsman_standing', 'standing');
             this.fixIndianPlayerSize();
         });
+        this.indian_plyer.on('animationstart', () => this.fixIndianPlayerSize());
+        this.indian_plyer.on('animationupdate', () => this.fixIndianPlayerSize());
 
         this.indian_plyer.play('bat_idle');
     }
@@ -514,6 +489,14 @@ class Game extends Phaser.Scene {
         });
 
         this.input.on('pointerup', pointer => {
+            if (this.waitingForDeliveryTap) {
+                this.waitingForDeliveryTap = false;
+                this.hideHandPointer();
+                this.playSfx('sfx_play_click', { volume: 0.9 });
+                this.startNextDelivery();
+                return;
+            }
+
             if (!this.gameActive || !this.ballInMotion || !this.waitingForShot) return;
 
             const dx = pointer.x - this.swipeStartX;
@@ -564,7 +547,6 @@ class Game extends Phaser.Scene {
         this.selectedShot = type;
 
         if (type === 'POWER') this.indian_plyer.play('bat_power', true);
-        else if (type === 'RUN_ONE') this.indian_plyer.play('bat_run_one', true);
         else if (type === 'DEFENCE') this.indian_plyer.play('bat_defence', true);
         else if (type === 'MISS') this.indian_plyer.play('bat_miss', true);
         else this.indian_plyer.play('bat_normal', true);
@@ -576,6 +558,7 @@ class Game extends Phaser.Scene {
     startNextDelivery() {
         if (!this.gameActive || this.ballInMotion) return;
 
+        this.waitingForDeliveryTap = false;
         this.ballInMotion = true;
         this.waitingForShot = false;
         this.selectedShot = 'MISS';
@@ -810,7 +793,7 @@ class Game extends Phaser.Scene {
             runs = defenceRun;
             animType = 'DEFENCE';
         }
-        this.playSelectedShot(runs === defenceRun ? 'RUN_ONE' : animType);
+        this.playSelectedShot(animType);
         if (runs > 0) this.handleHitBall(runs);
         else this.handleMissBall();
         this.stopDeliveryFrameOnly();
@@ -900,7 +883,16 @@ class Game extends Phaser.Scene {
             }
         });
 
-        this.addRuns(runs);
+        this.addRuns(runs, { showFeedback: false, checkEnd: false });
+        this.waitForBatsmanShotComplete(() => {
+            if (!this.gameActive) return;
+
+            this.showShotFeedback(runs);
+
+            if (this.indiaRuns >= this.targetScore) {
+                this._endGame('win');
+            }
+        });
     }
 
     handleMissBall() {
@@ -1046,6 +1038,28 @@ class Game extends Phaser.Scene {
         this.cricket_wicket__r.setDepth(layout.depth || 5);
     }
 
+    getBatsmanHomePoint() {
+        const mode = this.getLayoutMode();
+        const layout = mode.layout.indian_plyer;
+
+        return {
+            x: layout.x - mode.baseWidth / 2,
+            y: layout.y - mode.baseHeight / 2
+        };
+    }
+
+    resetBatsmanAfterRun() {
+        if (!this.indian_plyer) return;
+
+        const home = this.getBatsmanHomePoint();
+        this.tweens.killTweensOf(this.indian_plyer);
+        this.indian_plyer.setPosition(home.x, home.y);
+        this.indian_plyer.setFlipX(false);
+        this.indian_plyer.setTexture('batsman_standing', 'standing');
+        this.indian_plyer.play('bat_idle', true);
+        this.fixIndianPlayerSize();
+    }
+
     waitForNextBall() {
         this.ballInMotion = true;
         this.waitingForShot = false;
@@ -1060,10 +1074,19 @@ class Game extends Phaser.Scene {
             if (!this.gameActive) return;
 
             this.resetWicketAfterFall();
+            this.resetBatsmanAfterRun();
 
             this.ballInMotion = false;
-            this.startNextDelivery();
+            this.waitForDeliveryTap();
         });
+    }
+
+    waitForDeliveryTap() {
+        if (!this.gameActive || this.ballInMotion) return;
+
+        this.waitingForShot = false;
+        this.waitingForDeliveryTap = true;
+        this.currentDelivery = null;
     }
 
     stopDeliveryFrameOnly() {
@@ -1167,14 +1190,17 @@ class Game extends Phaser.Scene {
         }
     }
 
-    addRuns(run) {
+    addRuns(run, options = {}) {
         if (!this.gameActive) return;
 
-        this.showShotFeedback(run);
+        const showFeedback = options.showFeedback !== false;
+        const checkEnd = options.checkEnd !== false;
+
+        if (showFeedback) this.showShotFeedback(run);
         this.indiaRuns += run;
         this.updateBatsmanRuns();
 
-        if (this.indiaRuns >= this.targetScore) {
+        if (checkEnd && this.indiaRuns >= this.targetScore) {
             this._endGame('win');
         }
     }
@@ -1241,8 +1267,14 @@ class Game extends Phaser.Scene {
         const isLandscape = this.getLayoutMode().isLandscape;
         const size = isLandscape ? this.PLAYER_SIZE.landscape : this.PLAYER_SIZE.portrait;
         const layoutScale = this.getActiveLayoutValue('indian_plyer', 'scale') || 1;
+        const spriteSheetScale = this.indian_plyer.texture.key === 'batting_sheet'
+            ? this.BATSMAN_SHOT_SPRITESHEET_SCALE
+            : 1;
 
-        this.indian_plyer.setDisplaySize(size.width * layoutScale, size.height * layoutScale);
+        this.indian_plyer.setDisplaySize(
+            size.width * layoutScale * spriteSheetScale,
+            size.height * layoutScale * spriteSheetScale
+        );
     }
 
     fixBowlerSize() {
@@ -1272,10 +1304,12 @@ class Game extends Phaser.Scene {
         this.timeLeft = Math.floor(this.getNumberConfig('gameplay', 'timerDuration', 60, 1));
         this.ballInMotion = false;
         this.waitingForShot = false;
+        this.waitingForDeliveryTap = false;
         this.selectedShot = 'MISS';
         this.currentBallType = this.ballTypes.includes('GOOD_LENGTH') ? 'GOOD_LENGTH' : this.ballTypes[0];
 
         this.hideHandPointer();
+        this.resetBatsmanAfterRun();
 
         this.timerText.setText(String(this.timeLeft));
         this.timerText.setColor('#00FF00');
@@ -1338,7 +1372,7 @@ class Game extends Phaser.Scene {
 
     _startDeliveryLoop() {
         this._stopDeliveryLoop();
-        this.startNextDelivery();
+        this.waitForDeliveryTap();
     }
 
     _stopDeliveryLoop() {
@@ -1354,6 +1388,7 @@ class Game extends Phaser.Scene {
 
         this.ballInMotion = false;
         this.waitingForShot = false;
+        this.waitingForDeliveryTap = false;
         this.currentDelivery = null;
 
         if (this.ball) {
@@ -1363,17 +1398,16 @@ class Game extends Phaser.Scene {
     }
 
     showHandPointerForThreeSeconds(onComplete) {
-        if (!this.hand_pointer) {
+        if (!this.hand_pointer || !this.indian_plyer) {
             if (onComplete) onComplete();
             return;
         }
 
-        const mode = this.getLayoutMode();
-        const pitchLayout = mode.layout.cricket_pitch;
-
-        const tapX = pitchLayout.x - mode.baseWidth / 2;
-        const tapY = pitchLayout.y - mode.baseHeight / 2;
+        const isLandscape = this.getLayoutMode().isLandscape;
+        const tapX = this.indian_plyer.x + (isLandscape ? 62 : 54);
+        const tapY = this.indian_plyer.y - (isLandscape ? 16 : 8);
         const baseScale = this.getActiveLayoutValue('hand_pointer', 'scale') || 1;
+        const tapOffsetY = isLandscape ? 18 : 24;
 
         this.tweens.killTweensOf(this.hand_pointer);
 
@@ -1381,27 +1415,27 @@ class Game extends Phaser.Scene {
             .setPosition(tapX, tapY)
             .setScale(baseScale)
             .setAlpha(1)
-            .setDepth(60);
+            .setDepth(75);
 
         this.tweens.add({
             targets: this.hand_pointer,
+            y: tapY + tapOffsetY,
             scaleX: baseScale * 0.82,
             scaleY: baseScale * 0.82,
-            alpha: 0.45,
-            repeat: 1,
+            alpha: 0.6,
+            repeat: -1,
             yoyo: true,
             duration: 360,
+            hold: 90,
+            repeatDelay: 160,
             ease: 'Sine.easeInOut',
-            onRepeat: () => {
-                this.hand_pointer
-                    .setPosition(tapX, tapY)
-                    .setScale(baseScale)
-                    .setAlpha(1);
-            },
-            onComplete: () => {
+        });
+
+        this.time.delayedCall(this.getNumberConfig('gameplay', 'handPointerDuration', 3000, 0), () => {
+            if (this.hand_pointer) {
                 this.hideHandPointer();
-                if (onComplete) onComplete();
             }
+            if (onComplete) onComplete();
         });
     }
 
@@ -1530,10 +1564,6 @@ class Game extends Phaser.Scene {
             'assets/Hit_It_All_BatandBall/Batting Sprite/batting Sprite Image.png'
         );
         this.load.image(
-            'batsman_run_sheet',
-            'assets/RUN_spid_sheet_01a.webp'
-        );
-        this.load.image(
             'bowling_sheet',
             'assets/Hit_It_All_BatandBall/Baller_Sprite/Baller_Sprite.png'
         );
@@ -1543,6 +1573,7 @@ class Game extends Phaser.Scene {
         this.load.audio('sfx_ball_hit_bat', 'assets/sfx/ball hit bat.mp3');
         this.load.audio('sfx_game_lose', 'assets/sfx/game lose.mp3');
         this.load.audio('sfx_game_win', 'assets/sfx/game win.mp3');
+        this.load.audio('sfx_play_click', 'assets/sfx/matthewvakaliuk73627-mouse-click-290204.mp3');
     }
 
     playSfx(key, config = {}) {
@@ -1723,7 +1754,6 @@ class Game extends Phaser.Scene {
         this._stopDeliveryLoop();
         this.stopCrowdSound();
         this.gameActive = false;
-        this.playSfx(reason === 'win' ? 'sfx_game_win' : 'sfx_game_lose', { volume: this.getNumberConfig('audio', 'resultVolume', 1, 0, 1) });
 
         const endData = {
             reason,
@@ -1739,6 +1769,6 @@ class Game extends Phaser.Scene {
         this.cameras.main.once('camerafadeoutcomplete', () => {
             this.scene.start('End', endData);
         });
-        this.cameras.main.fadeOut(450, 0, 0, 0);
+        this.cameras.main.fadeOut(650, 0, 0, 0);
     }
 }

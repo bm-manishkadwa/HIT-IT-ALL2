@@ -52,17 +52,35 @@ class End extends Phaser.Scene {
         this.load.image('end_win', 'assets/hit it updated asset/hit-it_win_01.png');
         this.load.image('end_lose', 'assets/hit it updated asset/hit-it_lose_01.png');
         this.load.image('end_download_button', 'assets/hit it updated asset/hit-it_download-btn_01.png');
+        this.load.audio('sfx_game_win', 'assets/sfx/game win.mp3');
+        this.load.audio('sfx_game_lose', 'assets/sfx/game lose.mp3');
     }
 
     create() {
-        this.cameras.main.fadeIn(450, 0, 0, 0);
+        this.cameras.main.fadeIn(650, 0, 0, 0);
         this.createBackground();
         this.createEndContent();
         this.reflowForResize();
+        this.time.delayedCall(100, () => this.playResultSfx());
 
         this.scale.on('resize', this.reflowForResize, this);
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             this.scale.off('resize', this.reflowForResize, this);
+        });
+    }
+
+    playResultSfx() {
+        if (!this.getBoolConfig('audio', 'enabled', true)) return;
+
+        const won = this.result === 'win';
+        const audioKey = won ? 'win' : 'lose';
+        if (!this.getBoolConfig('audio', audioKey, true)) return;
+
+        const sfxKey = won ? 'sfx_game_win' : 'sfx_game_lose';
+        if (!this.sound || !this.cache.audio.exists(sfxKey)) return;
+
+        this.sound.play(sfxKey, {
+            volume: this.getNumberConfig('audio', 'resultVolume', 1, 0, 1)
         });
     }
 

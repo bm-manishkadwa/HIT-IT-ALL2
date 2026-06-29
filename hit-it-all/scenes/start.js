@@ -5,14 +5,14 @@ class Start extends Phaser.Scene {
         this.LAYOUT_PORTRAIT = {
             cricket_pitch: { x: 538, y: 1335, scale: 0.9, depth: 4 },
             hit_it_logo: { x: 540, y: 820, scale: 1, depth: 8 },
-            austrialian_plyer: { x: 872, y: 1196, scale: 0.62, depth: 4 },
+            austrialian_plyer: { x: 872, y: 1196, scale: 0.53, depth: 4 },
             cricket_wicket__l: { x: 984, y: 1253, scale: 1.45, angle: 2.704, depth: 5 },
             cricket_wicket__r: { x: 100, y: 1239, scale: 1.45, angle: -0.161, depth: 5 },
             ground_a: { x: 526, y: 108, scale: 3.35, depth: 1 },
-            hand_pointer: { x: 152, y: 1333, scale: 1, depth: 6 },
+            hand_pointer: { x: 565, y: 1760, scale: 0.95, depth: 10 },
             india_vs_austrila_panel: { x: 540, y: 250, scale: 0.85, depth: 8 },
-            indian_plyer: { x: 188, y: 1190, scale: 0.81, depth: 5 },
-            play_now: { x: 540, y: 1725, scale: 0.95, depth: 9 },
+            indian_plyer: { x: 188, y: 1190, scale: 0.69, depth: 5 },
+            play_now: { x: 540, y: 1675, scale: 0.95, depth: 9 },
             skay_a: { x: 577, y: 745, scale: 1.95, depth: 1 },
             stadium_a: { x: 554, y: 680, scale: 1.5, depth: 1 },
         };
@@ -22,14 +22,14 @@ class Start extends Phaser.Scene {
         this.LAYOUT_LANDSCAPE = {
             cricket_pitch: { x: 1046, y: 750, scale: 1.35, depth: 4 },
             hit_it_logo: { x: 960, y: 450, scale: 0.85, depth: 8 },
-            austrialian_plyer: { x: 1584, y: 599, scale: 0.65, depth: 4 },
+            austrialian_plyer: { x: 1584, y: 599, scale: 0.56, depth: 4 },
             cricket_wicket__l: { x: 1703, y: 662, scale: 1.45, angle: 2.704, depth: 5 },
             cricket_wicket__r: { x: 391, y: 651, scale: 1.45, angle: -3.025, depth: 5 },
             ground_a: { x: 1087, y: 26, scale: 2, depth: 1 },
-            hand_pointer: { x: 442, y: 767, scale: 1, depth: 6 },
+            hand_pointer: { x: 985, y: 970, scale: 0.85, depth: 10 },
             india_vs_austrila_panel: { x: 960, y: 135, scale: 0.75, depth: 8 },
-            indian_plyer: { x: 489, y: 605, scale: 0.85, depth: 5 },
-            play_now: { x: 960, y: 930, scale: 0.8, depth: 9 },
+            indian_plyer: { x: 489, y: 605, scale: 0.73, depth: 5 },
+            play_now: { x: 960, y: 890, scale: 0.8, depth: 9 },
             skay_a: { x: 1012, y: 343, scale: 1.1, depth: 1 },
             stadium_a: { x: 1015, y: 336, scale: 1.05, depth: 1 },
         };
@@ -65,6 +65,7 @@ class Start extends Phaser.Scene {
         this.scale.on('resize', this.reflowForResize, this);
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             this.scale.off('resize', this.reflowForResize, this);
+            this.tweens.killTweensOf([this.play_now, this.hand_pointer]);
         });
 
         // this.uiEditor = new UIEditor(this, {
@@ -135,7 +136,17 @@ class Start extends Phaser.Scene {
     }
 
     setupStartActions() {
-        const startGame = () => this.scene.start('Game');
+        const startGame = () => {
+            if (this.startingGame) return;
+
+            this.startingGame = true;
+            if (this.sound && this.cache.audio.exists('sfx_play_click')) {
+                this.sound.play('sfx_play_click', { volume: 0.9 });
+            }
+
+            this.time.delayedCall(120, () => this.scene.start('Game'));
+        };
+
         if (this.play_now) this.play_now.setInteractive({ useHandCursor: true }).on('pointerdown', startGame);
         if (this.getBoolConfig('startScene', 'tapToStart', true)) this.input.once('pointerdown', startGame);
     }
@@ -204,6 +215,7 @@ class Start extends Phaser.Scene {
         }
 
         this.startPlayNowPulse();
+        this.startHandPointerTap();
         this.sortContainerDepths();
     }
 
@@ -220,6 +232,35 @@ class Start extends Phaser.Scene {
             duration: 900,
             yoyo: true,
             repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+    }
+
+    startHandPointerTap() {
+        if (!this.hand_pointer) return;
+
+        this.tweens.killTweensOf(this.hand_pointer);
+
+        const baseX = this.hand_pointer.x;
+        const baseY = this.hand_pointer.y;
+        const baseScale = this.hand_pointer.scaleX || 1;
+
+        this.hand_pointer
+            .setPosition(baseX, baseY)
+            .setScale(baseScale)
+            .setAlpha(1);
+
+        this.tweens.add({
+            targets: this.hand_pointer,
+            y: baseY + 18,
+            scaleX: baseScale * 0.9,
+            scaleY: baseScale * 0.9,
+            alpha: 0.78,
+            duration: 360,
+            hold: 120,
+            yoyo: true,
+            repeat: -1,
+            repeatDelay: 420,
             ease: 'Sine.easeInOut'
         });
     }
@@ -277,5 +318,7 @@ class Start extends Phaser.Scene {
         for (const asset of assets) {
             this.load.image(asset.key, asset.path);
         }
+
+        this.load.audio('sfx_play_click', 'assets/sfx/matthewvakaliuk73627-mouse-click-290204.mp3');
     }
 }
