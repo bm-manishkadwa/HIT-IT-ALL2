@@ -178,7 +178,7 @@ class Start extends Phaser.Scene {
         this.flagContainer.setScale(fitScale);
 
         this.stadiumContainer.setPosition(0, 0);
-        this.stadiumContainer.setScale(1);
+        this.stadiumContainer.setScale(groundScale / fitScale);
 
         this.groundContainer.setPosition(0, 0);
         this.groundContainer.setScale(groundScale / fitScale);

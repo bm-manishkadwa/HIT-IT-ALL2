@@ -47,37 +47,37 @@ class Game extends Phaser.Scene {
         this.gameSettings = window.HIT_IT_ALL_SETTINGS || {};
 
         this.LAYOUT_PORTRAIT = {
-            cricket_pitch: { x: 550, y: 1422, scale: 0.9, depth: 4 },
+            cricket_pitch: { x: 538, y: 1335, scale: 0.9, depth: 4 },
             hit_it_logo: { x: 160, y: 1719, scale: 0.55, depth: 4 },
             australia_flag: { x: 822, y: 134, scale: 1, depth: 3 },
-            austrialian_plyer: { x: 876, y: 1300, scale: 1, depth: 4 },
+            austrialian_plyer: { x: 872, y: 1213, scale: 1, depth: 4 },
             ball: { x: 746, y: 1225, scale: 0.55, alpha: 0, depth: 30 },
-            cricket_wicket__l: { x: 983, y: 1336, scale: 1.45, depth: 5 },
-            cricket_wicket__r: { x: 121, y: 1325, scale: 1.45, angle: -2.865, depth: 5 },
-            ground_a: { x: 349, y: 270, scale: 3.05, depth: 1 },
-            hand_pointer: { x: 239, y: 1289, scale: 1, alpha: 0, depth: 6 },
+            cricket_wicket__l: { x: 984, y: 1253, scale: 1.45, angle: 2.704, depth: 5 },
+            cricket_wicket__r: { x: 100, y: 1239, scale: 1.45, angle: -0.161, depth: 5 },
+            ground_a: { x: 526, y: 108, scale: 3.35, depth: 1 },
+            hand_pointer: { x: 188, y: 1202, scale: 1, alpha: 0, depth: 6 },
             india_flag: { x: 301, y: 127, scale: 1, depth: 3 },
-            indian_plyer: { x: 239, y: 1300, scale: 1, depth: 5 },
+            indian_plyer: { x: 188, y: 1213, scale: 1, depth: 5 },
             scoreboard_with_text: { x: 527, y: 639, scale: 1.4, depth: 3 },
-            skay_a: { x: 562, y: 753, scale: 2.1, depth: 1 },
-            stadium_a: { x: 543, y: 707, scale: 1.45, depth: 1 }
+            skay_a: { x: 577, y: 745, scale: 1.95, depth: 1 },
+            stadium_a: { x: 554, y: 680, scale: 1.5, depth: 1 }
         };
 
         this.LAYOUT_LANDSCAPE = {
-            cricket_pitch: { x: 952, y: 766, scale: 1.25, depth: 4 },
+            cricket_pitch: { x: 1046, y: 750, scale: 1.35, depth: 4 },
             hit_it_logo: { x: 136, y: 980, scale: 0.55, depth: 4 },
             australia_flag: { x: 1197, y: 71, scale: 0.5, depth: 3 },
-            austrialian_plyer: { x: 1469, y: 630, scale: 1, depth: 4 },
+            austrialian_plyer: { x: 1584, y: 614, scale: 1, depth: 4 },
             ball: { x: 1210, y: 620, scale: 0.55, alpha: 0, depth: 30 },
-            cricket_wicket__l: { x: 1583, y: 689, scale: 1.45, depth: 5 },
-            cricket_wicket__r: { x: 363, y: 669, scale: 1.45, depth: 5 },
-            ground_a: { x: 929, y: 36, scale: 1.95, depth: 1 },
-            hand_pointer: { x: 480, y: 628, scale: 1, alpha: 0, depth: 6 },
+            cricket_wicket__l: { x: 1703, y: 662, scale: 1.45, angle: 2.704, depth: 5 },
+            cricket_wicket__r: { x: 391, y: 651, scale: 1.45, angle: -3.025, depth: 5 },
+            ground_a: { x: 1087, y: 26, scale: 2, depth: 1 },
+            hand_pointer: { x: 489, y: 612, scale: 1, alpha: 0, depth: 6 },
             india_flag: { x: 784, y: 64, scale: 0.5, depth: 3 },
-            indian_plyer: { x: 480, y: 630, scale: 1, depth: 5 },
+            indian_plyer: { x: 489, y: 614, scale: 1, depth: 5 },
             scoreboard_with_text: { x: 980, y: 295, scale: 0.95, depth: 3 },
-            skay_a: { x: 986, y: 371, scale: 1.45, depth: 1 },
-            stadium_a: { x: 984, y: 342, scale: 1.1, depth: 1 }
+            skay_a: { x: 1012, y: 343, scale: 1.1, depth: 1 },
+            stadium_a: { x: 1015, y: 336, scale: 1.05, depth: 1 }
         };
     }
 
@@ -1085,8 +1085,10 @@ class Game extends Phaser.Scene {
         if (!this.gameActive || this.ballInMotion) return;
 
         this.waitingForShot = false;
-        this.waitingForDeliveryTap = true;
+        this.waitingForDeliveryTap = false;
         this.currentDelivery = null;
+
+        this.startNextDelivery();
     }
 
     stopDeliveryFrameOnly() {
@@ -1177,7 +1179,7 @@ class Game extends Phaser.Scene {
         };
     }
 
-    addDotBallWithoutText() {}
+    addDotBallWithoutText() { }
 
     addWicket() {
         if (!this.gameActive) return;

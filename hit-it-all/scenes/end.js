@@ -138,20 +138,20 @@ class End extends Phaser.Scene {
         });
         this.backgroundContainer.sort('depth');
 
-        const logoWidth = Math.min(W * (isLandscape ? 0.21 : 0.45), 360 * Math.max(uiScale, 0.75));
+        const logoWidth = Math.min(W * (isLandscape ? 0.21 : 0.45), 360 * Math.max(uiScale, 0.75)) * 0.85;
         const logoScale = logoWidth / this.hit_it_logo.width;
 
         this.hit_it_logo
             .setPosition(W / 2, H * (isLandscape ? 0.15 : 0.13))
             .setScale(logoScale);
 
-        const resultWidth = Math.min(W * (isLandscape ? 0.22 : 0.62), 440 * Math.max(uiScale, 0.8));
+        const resultWidth = Math.min(W * (isLandscape ? 0.22 : 0.62), 440 * Math.max(uiScale, 0.8)) * 0.85;
         const resultScale = resultWidth / this.resultImage.width;
         this.resultImage
             .setPosition(W / 2, H * (isLandscape ? 0.52 : 0.48))
             .setScale(resultScale);
 
-        const buttonWidth = Math.min(W * (isLandscape ? 0.28 : 0.66), 460 * Math.max(uiScale, 0.8));
+        const buttonWidth = Math.min(W * (isLandscape ? 0.28 : 0.66), 460 * Math.max(uiScale, 0.8)) * 0.85;
         const buttonScale = buttonWidth / this.downloadButton.width;
         this.downloadButton
             .setPosition(W / 2, H * (isLandscape ? 0.84 : 0.85))
