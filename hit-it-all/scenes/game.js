@@ -11,6 +11,7 @@ class Game extends Phaser.Scene {
         this.timerEvent = null;
         this.deliveryEvent = null;
         this.crowdSound = null;
+        this.isHandPointerActive = false;
 
         this.ballInMotion = false;
         this.waitingForShot = false;
@@ -156,9 +157,12 @@ class Game extends Phaser.Scene {
 
         this.scale.off('resize', this.reflowForResize, this);
         this.scale.on('resize', this.reflowForResize, this);
+        this.scale.off('orientationchange', this.reflowForResize, this);
+        this.scale.on('orientationchange', this.reflowForResize, this);
 
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             this.scale.off('resize', this.reflowForResize, this);
+            this.scale.off('orientationchange', this.reflowForResize, this);
             this._stopTimer();
             this._stopDeliveryLoop();
             this.stopCrowdSound();
@@ -1098,9 +1102,15 @@ class Game extends Phaser.Scene {
         }
     }
 
-    getLayoutMode() {
-        const W = this.scale.width;
-        const H = this.scale.height;
+    getLayoutMode(W, H) {
+        if (W !== undefined && H !== undefined) {
+            this._lastW = W;
+            this._lastH = H;
+        } else {
+            W = this._lastW !== undefined ? this._lastW : this.scale.width;
+            H = this._lastH !== undefined ? this._lastH : this.scale.height;
+        }
+
         const ratio = W / H;
 
         const isLandscape = ratio >= 1.18;
@@ -1405,6 +1415,20 @@ class Game extends Phaser.Scene {
             return;
         }
 
+        this.isHandPointerActive = true;
+        this.repositionHandPointer();
+
+        this.time.delayedCall(this.getNumberConfig('gameplay', 'handPointerDuration', 3000, 0), () => {
+            if (this.hand_pointer) {
+                this.hideHandPointer();
+            }
+            if (onComplete) onComplete();
+        });
+    }
+
+    repositionHandPointer() {
+        if (!this.hand_pointer || !this.isHandPointerActive) return;
+
         const isLandscape = this.getLayoutMode().isLandscape;
         const tapX = this.indian_plyer.x + (isLandscape ? 62 : 54);
         const tapY = this.indian_plyer.y - (isLandscape ? 16 : 8);
@@ -1432,16 +1456,10 @@ class Game extends Phaser.Scene {
             repeatDelay: 160,
             ease: 'Sine.easeInOut',
         });
-
-        this.time.delayedCall(this.getNumberConfig('gameplay', 'handPointerDuration', 3000, 0), () => {
-            if (this.hand_pointer) {
-                this.hideHandPointer();
-            }
-            if (onComplete) onComplete();
-        });
     }
 
     hideHandPointer() {
+        this.isHandPointerActive = false;
         if (!this.hand_pointer) return;
 
         this.tweens.killTweensOf(this.hand_pointer);
@@ -1609,10 +1627,10 @@ class Game extends Phaser.Scene {
         }
     }
 
-    reflowForResize() {
-        const W = this.scale.width;
-        const H = this.scale.height;
-        const mode = this.getLayoutMode();
+    reflowForResize(gameSize) {
+        const W = (gameSize && typeof gameSize.width === 'number') ? gameSize.width : this.scale.width;
+        const H = (gameSize && typeof gameSize.height === 'number') ? gameSize.height : this.scale.height;
+        const mode = this.getLayoutMode(W, H);
         const layout = mode.layout;
         const baseWidth = mode.baseWidth;
         const baseHeight = mode.baseHeight;
@@ -1637,7 +1655,11 @@ class Game extends Phaser.Scene {
             const displayX = x - baseWidth / 2;
             const displayY = y - baseHeight / 2;
 
-            if (key !== 'ball' || !this.ballInMotion) {
+            if (key === 'ball' && this.ballInMotion) {
+                // keep current position and alpha
+            } else if (key === 'hand_pointer' && this.isHandPointerActive) {
+                // reposition handled later
+            } else {
                 this[key].setPosition(displayX, displayY);
                 this[key].setAlpha(alpha);
                 if (scale !== undefined) this[key].setScale(scale);
@@ -1652,6 +1674,7 @@ class Game extends Phaser.Scene {
 
         this.fixIndianPlayerSize();
         this.fixBowlerSize();
+        this.repositionHandPointer();
 
         this.positionCountdown();
         this.positionTimer();

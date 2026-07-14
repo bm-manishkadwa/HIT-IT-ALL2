@@ -64,8 +64,10 @@ class End extends Phaser.Scene {
         this.time.delayedCall(100, () => this.playResultSfx());
 
         this.scale.on('resize', this.reflowForResize, this);
+        this.scale.on('orientationchange', this.reflowForResize, this);
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             this.scale.off('resize', this.reflowForResize, this);
+            this.scale.off('orientationchange', this.reflowForResize, this);
         });
     }
 
@@ -116,9 +118,9 @@ class End extends Phaser.Scene {
         }
     }
 
-    reflowForResize() {
-        const W = this.scale.width;
-        const H = this.scale.height;
+    reflowForResize(gameSize) {
+        const W = (gameSize && typeof gameSize.width === 'number') ? gameSize.width : this.scale.width;
+        const H = (gameSize && typeof gameSize.height === 'number') ? gameSize.height : this.scale.height;
         const isLandscape = W / H >= 1.18;
         const baseWidth = isLandscape ? 1920 : 1080;
         const baseHeight = isLandscape ? 1080 : 1920;

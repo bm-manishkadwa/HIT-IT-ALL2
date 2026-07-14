@@ -63,8 +63,10 @@ class Start extends Phaser.Scene {
         this.reflowForResize();
 
         this.scale.on('resize', this.reflowForResize, this);
+        this.scale.on('orientationchange', this.reflowForResize, this);
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             this.scale.off('resize', this.reflowForResize, this);
+            this.scale.off('orientationchange', this.reflowForResize, this);
             this.tweens.killTweensOf([this.play_now, this.hand_pointer]);
         });
 
@@ -151,9 +153,9 @@ class Start extends Phaser.Scene {
         if (this.getBoolConfig('startScene', 'tapToStart', true)) this.input.once('pointerdown', startGame);
     }
 
-    reflowForResize(gameSize = { width: this.scale.width, height: this.scale.height }) {
-        const W = gameSize.width;
-        const H = gameSize.height;
+    reflowForResize(gameSize) {
+        const W = (gameSize && typeof gameSize.width === 'number') ? gameSize.width : this.scale.width;
+        const H = (gameSize && typeof gameSize.height === 'number') ? gameSize.height : this.scale.height;
 
         const isLandscape = W > H;
         const layout = isLandscape ? this.LAYOUT_LANDSCAPE : this.LAYOUT_PORTRAIT;
