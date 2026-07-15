@@ -70,13 +70,15 @@ class Start extends Phaser.Scene {
             this.tweens.killTweensOf([this.play_now, this.hand_pointer]);
         });
 
-        // this.uiEditor = new UIEditor(this, {
-        //     enabled: true,
-        //     keys: this.getEditorKeys(),
-        //     gridSize: 10,
-        //     fileName: 'start.js',
-        //     restoreFromLocalStorage: false
-        // });
+        if (typeof UIEditor !== 'undefined') {
+            this.uiEditor = new UIEditor(this, {
+                enabled: !!this.getSettingsSection('editor').uiEditorEnabled,
+                keys: this.getEditorKeys(),
+                gridSize: 10,
+                fileName: 'start.js',
+                restoreFromLocalStorage: false
+            });
+        }
     }
 
     createUI() {

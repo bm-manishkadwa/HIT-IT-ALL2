@@ -69,6 +69,27 @@ class End extends Phaser.Scene {
             this.scale.off('resize', this.reflowForResize, this);
             this.scale.off('orientationchange', this.reflowForResize, this);
         });
+
+        if (typeof UIEditor !== 'undefined') {
+            this.uiEditor = new UIEditor(this, {
+                enabled: !!this.getSettingsSection('editor').uiEditorEnabled,
+                keys: this.getEditorKeys(),
+                gridSize: 10,
+                fileName: 'end.js',
+                restoreFromLocalStorage: false
+            });
+        }
+    }
+
+    getEditorKeys() {
+        return [
+            'skay_a',
+            'stadium_a',
+            'ground_a',
+            'hit_it_logo',
+            'resultImage',
+            'downloadButton'
+        ];
     }
 
     playResultSfx() {

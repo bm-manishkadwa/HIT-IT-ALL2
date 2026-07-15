@@ -170,15 +170,15 @@ class Game extends Phaser.Scene {
 
         this.setupGame();
 
-        // if (typeof UIEditor !== 'undefined') {
-        //     this.uiEditor = new UIEditor(this, {
-        //         enabled: true,
-        //         keys: this.getEditorKeys(),
-        //         gridSize: 10,
-        //         fileName: 'game.js',
-        //         restoreFromLocalStorage: false
-        //     });
-        // }
+        if (typeof UIEditor !== 'undefined') {
+            this.uiEditor = new UIEditor(this, {
+                enabled: !!this.getSettingsSection('editor').uiEditorEnabled,
+                keys: this.getEditorKeys(),
+                gridSize: 10,
+                fileName: 'game.js',
+                restoreFromLocalStorage: false
+            });
+        }
     }
 
     getEditorKeys() {

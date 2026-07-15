@@ -8,6 +8,7 @@ from typing import Any, Dict
 CONFIG_NAME = "HIT_IT_ALL_SETTINGS"
 
 DEFAULT_CONFIG: Dict[str, Any] = {
+    "editor": {"uiEditorEnabled": False},
     "gameplay": {"targetScore": None, "targetScoreMin": 10, "targetScoreMax": 40, "timerDuration": 60, "maxWickets": 1, "nextBallDelay": 3000, "ballTypes": ["FULL_TOSS", "BOUNCER", "YORKER", "GOOD_LENGTH", "SLOWER", "SWING"], "wicketHitChance": 45, "handPointerDuration": 3000, "handSwipeDistancePortrait": 190, "handSwipeDistanceLandscape": 260},
     "scoring": {"powerRun": 6, "normalRun": 4, "defenceRun": 1, "perfectTimingWindow": 0.075, "goodTimingWindow": 0.15, "okayTimingWindow": 0.24},
     "delivery": {"speeds": {"FULL_TOSS": 720, "BOUNCER": 680, "YORKER": 620, "GOOD_LENGTH": 760, "SLOWER": 980, "SWING": 820}, "idealHitTimes": {"FULL_TOSS": 0.72, "BOUNCER": 0.86, "YORKER": 0.90, "GOOD_LENGTH": 0.82, "SLOWER": 0.84, "SWING": 0.83}},
@@ -20,6 +21,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
 }
 
 COMMAND_MAP = {
+    "ui_editor_enabled": ("editor", "uiEditorEnabled"),
     "target_score": ("gameplay", "targetScore"),
     "target_score_min": ("gameplay", "targetScoreMin"),
     "target_score_max": ("gameplay", "targetScoreMax"),
