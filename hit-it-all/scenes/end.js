@@ -168,7 +168,8 @@ class End extends Phaser.Scene {
             .setPosition(W / 2, H * (isLandscape ? 0.15 : 0.13))
             .setScale(logoScale);
 
-        const resultWidth = Math.min(W * (isLandscape ? 0.22 : 0.62), 440 * Math.max(uiScale, 0.8)) * 0.85;
+        const isWin = this.result === 'win';
+        const resultWidth = Math.min(W * (isLandscape ? 0.22 : 0.62), 440 * Math.max(uiScale, 0.8)) * 0.85 * (isWin ? 1 : 0.8);
         const resultScale = resultWidth / this.resultImage.width;
         this.resultImage
             .setPosition(W / 2, H * (isLandscape ? 0.52 : 0.48))

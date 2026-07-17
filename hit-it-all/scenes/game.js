@@ -713,7 +713,17 @@ class Game extends Phaser.Scene {
             }
         };
 
-        return values[type] || values.GOOD_LENGTH;
+        let bounce = values[type] || values.GOOD_LENGTH;
+
+        if (type !== 'FULL_TOSS' && this.cricket_pitch) {
+            const halfW = (this.cricket_pitch.displayWidth || (1157 * this.cricket_pitch.scale)) / 2;
+            const halfH = (this.cricket_pitch.displayHeight || (63 * this.cricket_pitch.scale)) / 2;
+
+            bounce.x = Phaser.Math.Clamp(bounce.x, pitchX - halfW + 15, pitchX + halfW - 15);
+            bounce.y = Phaser.Math.Clamp(bounce.y, pitchY - halfH + 8, pitchY + halfH - 8);
+        }
+
+        return bounce;
     }
 
     getBatsmanContactPointByType(type) {
